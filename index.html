@@ -1,27 +1,103 @@
 <!DOCTYPE html>
 <head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/animate.css">
   <title>Pusher Test</title>
 </head>
 <body>
-  <h1>Pusher Test</h1>
-  <p>
-    Try publishing an event to channel <code>my-channel</code>
-    with event name <code>my-event</code>.
-  </p>
+  
+  <div id="theBidD" style="background-color: #F2F4F3; height:100%;">
+    <nav class="navbar navbar-default menu">
+      <div class="col-md-2 col-xs-0" ></div>
+      <div class="col-md-8 col-xs-12" id="navBardiv">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Cryptochat</a>
+        </div>
+      </div>
+      <div class="col-md-2 col-xs-0"></div>
+    </nav>
+    <div class="col-md-2 col-xs-0"></div>
+    <div class="col-md-8 col-xs-12" style="height: 100%;">
+      <!-- Game -->
+      
+      <!-- Game and chat -->
+      <div class="row" id="playerAndChat">
+        <!-- Chat -->
+        <div class="col-md-12 col-xs-12 ostguessblock guessChatHolder">
+          <div class="form-control guessChat" id="guessChat"></div>
+        </div>
+      </div>
+      <!-- Chat Input V1-->
+      <div class="row ostguessblock guessInput">
+        <form id="chatForm">
+          <div class="form-group insideblock" id="chatInputDiv">
+            <p>Chat:</p>
+            <input autocomplete="off" type="text" class="form-control" id="chatInput">
+          </div>
+          <button style="float:left" type="submit" class="btn btn-primary" id="chatSubmit">chat</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-md-2 col-xs-0"></div>
+  </div>
   <script src="https://js.pusher.com/4.3/pusher.min.js"></script>
+  <script
+  src="https://code.jquery.com/jquery-3.1.1.min.js"
+  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+  crossorigin="anonymous"></script>
   <script>
 
-    // Enable pusher logging - don't include this in production
-    Pusher.logToConsole = true;
+      var username = "unnamed";
 
-    var pusher = new Pusher('643eb4a4a2a8cab96149', {
-      cluster: 'us2',
-      forceTLS: true
-    });
+      // Enable pusher logging - don't include this in production
+      Pusher.logToConsole = true;
+  
+      var pusher = new Pusher('643eb4a4a2a8cab96149', {
+        cluster: 'us2',
+        forceTLS: true
+      });
+  
+      var channel = pusher.subscribe('my-channel');
+      channel.bind('my-event', function(data) {
+        console.log("message recived");
+        onMessageRecived(data);
+      });
 
-    var channel = pusher.subscribe('my-channel');
-    channel.bind('my-event', function(data) {
-      alert(JSON.stringify(data));
-    });
-  </script>
+      $(document).ready(function(){
+        $("#chatForm").submit(function(event){
+          console.log("submit chat");
+          event.preventDefault();
+          chat();
+        });
+      });
+
+      function chat(){
+        var datos = {
+          'username': username,
+          'message': $("#chatInput").val(),
+        }
+        $.ajax({
+          data: datos,
+          url: 'pusherTest.php',
+          type: "post",
+          success: function(){
+            console.log("chat success");
+          },
+          error: function(e1, e2, e3){
+            console.log(e1);
+            console.log(e2);
+            console.log(e3);
+          }
+        })
+      }
+
+      function onMessageRecived(data){
+        console.log("processing message");
+        var html = "<p>"+ data["username"] + ": " + data["message"] + "</p>";
+		    $(".guessChat").append(html);
+		    $('.guessChat').scrollTop($('.guessChat')[0].scrollHeight);
+      }
+    </script>
 </body>
