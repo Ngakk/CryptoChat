@@ -4,7 +4,7 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/animate.css">
-  <title>Pusher Test</title>
+  <title>Chat</title>
 </head>
 <body>
   
@@ -42,11 +42,41 @@
     </div>
     <div class="col-md-2 col-xs-0"></div>
   </div>
+
+  <div class="modal" tabindex="-1" role="dialog" id="themodal">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Username: </h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form id="get-username-form">
+        <div class="modal-body">
+          
+            <div class="form-group">
+              <label>Input your wanted username:</label>
+              <input type="text" id="input-username">
+            </div>
+          
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save changes</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  
   <script src="https://js.pusher.com/4.3/pusher.min.js"></script>
   <script
   src="https://code.jquery.com/jquery-3.1.1.min.js"
   integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
   crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
   <script>
 
       var username = "unnamed";
@@ -66,6 +96,15 @@
       });
 
       $(document).ready(function(){
+
+        $("#themodal").modal();
+
+        $("#get-username-form").submit(function(event){
+          event.preventDefault();
+          $("#themodal").modal("hide");
+          username = $("#input-username").val();
+        });
+
         $("#chatForm").submit(function(event){
           console.log("submit chat");
           event.preventDefault();
@@ -74,10 +113,18 @@
       });
 
       function chat(){
+        var d = new Date();
         var datos = {
           'username': username,
           'message': $("#chatInput").val(),
+          'year' : d.getFullYear(),
+          'month' : d.getMonth(),
+          'day' : d.getDate(),
+          'hour' : d.getHours(),
+          'minute' : d.getMinutes(),
         }
+        datos = Encrypt(datos);
+        console.log(datos);
         $.ajax({
           data: datos,
           url: 'pusherTest.php',
@@ -95,9 +142,110 @@
 
       function onMessageRecived(data){
         console.log("processing message");
-        var html = "<p>"+ data["username"] + ": " + data["message"] + "</p>";
+        var encrypted = data.message;
+        var message = Decrypt(data);
+        var html = "<p>"+ data["username"] + ": " + message["message"] + "</p>";
+        html += "<p><b>Debug log: </b> Encrypted message: "+ encrypted +"</p>"
 		    $(".guessChat").append(html);
 		    $('.guessChat').scrollTop($('.guessChat')[0].scrollHeight);
+      }
+
+      function theMachine(value, i, key){
+        var x = key.charCodeAt(i%key.length);
+
+        //value = Math.pow(x + value, x) % x;
+        value += x;
+
+        return value;
+      }
+
+      function machineThe(value, i, key){
+        var x = key.charCodeAt(i%key.length);
+
+        value -= x;
+
+        return value;
+      }
+
+      function Encrypt(message){
+        var keyword = GenKeyword(message);
+        var encrypted = "";
+        var s1 = 0, s2 = 0;
+        for(var i = 0; i < message.message.length; i++){
+          var key = "";
+          var s = 0;
+          if(i%2 == 0){
+            key = message.username;
+            s = s1;
+            s1++;
+          }
+          else{
+            key = keyword;
+            s = s2;
+            s2++;
+          }
+          
+
+          var value = message.message.charCodeAt(i);
+          var debugtemp = value;
+          value = theMachine(value, s, key);
+          console.log("Changed character value from " + debugtemp + " to " + value + " with keyword: " + key);
+          encrypted += String.fromCharCode(value);
+        }
+        console.log("Encrypted = " + encrypted);
+        message.message = encrypted;
+        return message;
+      }
+
+      function Decrypt(message){
+        var keyword = GenKeyword(message);
+        var decrypted = "";
+        console.log(message);
+        var s1 = 0, s2 = 0;
+        for(var i = 0; i < message.message.length; i++){
+          var key = "";
+          var s = 0;
+          if(i%2 == 0){
+            key = message.username;
+            s = s1;
+            s1++;
+          }
+          else{
+            key = keyword;
+            s = s2;
+            s2++;
+          }
+
+          var value = message.message.charCodeAt(i);
+          var debugtemp = value;
+          value = machineThe(value, s, key);
+          console.log("Changed character value from " + debugtemp + " to " + value + " with keyword: " + key);
+          decrypted += String.fromCharCode(value);
+        }
+        console.log("Decrypted: " + decrypted);
+        message.message = decrypted;
+        return message;
+      }
+
+      function GenKeyword(d){
+        var keyword = "";
+        
+        var n = (d.year * d.minute) % 24;
+        var m = d.minute;
+
+        for(var i = 0; i < n; i++){
+          var char = m;
+          var c = Math.ceil(((i+1) * d.day * d.month) / m);
+          for(var j = 0; j < d.month; j++){
+            var a = 10*i;
+            var firstAdd = a*1 + d.month*1;
+            var firstTimes = firstAdd * char;
+            var secondAdd = firstTimes*1 + c*1;
+            char = (secondAdd)%c; 
+          }
+          keyword += String.fromCharCode(char);
+        }
+        return keyword;
       }
     </script>
 </body>
